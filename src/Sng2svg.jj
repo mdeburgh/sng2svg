@@ -1,0 +1,141 @@
+
+PARSER_BEGIN(Sng2svg)
+import java.util.*; 
+import java.io.*;
+
+public class Sng2svg {
+
+  /** Main entry point. */
+  public static void main(String args[]) throws ParseException, IOException {
+ 	InputStream ins;
+    OutputStream outs;
+    File fileIn;
+    File fileOut;
+    
+    if (args.length < 1)
+    	ins = System.in;
+    else {
+        fileIn = new File(args[0]);
+    	ins = new FileInputStream(fileIn); 
+    }
+
+    if (args.length < 2)
+    	outs = System.out;
+    else {
+        fileOut = new File(args[1]);   
+    	outs = new FileOutputStream(fileOut);	
+    }
+    	
+    Sng2svg parser = new Sng2svg(ins);
+    Writer out
+       = new BufferedWriter(new OutputStreamWriter(outs));
+    SVGRenderer render = new SVGRenderer(out);
+    render.printHeader();
+    parser.Input(render);
+    render.printFooter();
+  }
+
+}
+
+PARSER_END(Sng2svg)
+
+SKIP :
+{ " "	
+| "\t"
+| "\n"
+| "\r"
+}
+
+TOKEN :
+{
+  <TITLEBLK: "<TITLE>">
+| <ENDTITLE: "</TITLE>">
+| <TEXTBLK: "<TEXT>">
+| <ENDTEXT: "</TEXT>">
+| <BARSBLK: "<BARS>">
+| <ENDBARSBLK: "</BARS>">
+| <BARSDESC: "<DESC>">
+| <ENDBARSDESC: "</DESC>">
+| <BARLINE: "|">
+| <OPENREPEAT: "<:">
+| <CLOSEREPEAT: ":>">
+| <OPENDOUBLEBAR: "<|">
+| <CLOSEDOUBLEBAR: "|>">
+| <CHORD: "[" ["A"-"G","Z"] (["a"-"z","A"-"Z","0"-"9","#","-","+","/"])* "]">
+| <TEXT:  ( ["a"-"z","A"-"Z","0"-"9",".","!","?","`","(",")","'"] )+ ([" "] ( ["a"-"z","A"-"Z","0"-"9",".","!","?","`","(",")","'"] )+)* >
+}
+
+/** Root production. */
+void Input(SVGRenderer render) throws IOException :
+{ }
+{
+  Song(render) <EOF>
+  { ; }
+}
+
+void Bar(SVGRenderer render) throws IOException :
+{   java.util.Vector chordtext = new java.util.Vector<BarInfo>();
+    Token tPreText;
+    String sPreText;
+    Token tChord;
+    String sChord;
+    Token tText;
+    String sText;
+    Boolean bRepStart, bRepEnd, bDoubleBarStart, bDoubleBarEnd;
+}
+{	
+	{sPreText = "";bRepStart=false; bRepEnd=false;bDoubleBarStart=false;bDoubleBarEnd=false;}
+	[tPreText=<TEXT> {sPreText = tPreText.image;}] 
+	[<OPENDOUBLEBAR> {bDoubleBarStart=true;}]
+	[<OPENREPEAT> {bRepStart=true;}]
+	( tChord=<CHORD> {sText = "";} 
+		[tText=<TEXT> {sText = tText.image;}] 
+		{sChord = tChord.image; chordtext.addElement(new BarInfo(sChord.substring(1,sChord.length()-1), sText));  }
+	)*
+	[<CLOSEREPEAT> {bRepEnd=true;}]
+	[<CLOSEDOUBLEBAR> {bDoubleBarEnd=true;}]
+	<BARLINE> 
+	{render.printBar(sPreText, chordtext, bRepStart, bRepEnd, bDoubleBarStart, bDoubleBarEnd);}	
+}
+
+void Bars(SVGRenderer render) throws IOException :
+{ 
+    Token tPreText;
+    String sPreText;
+} 
+{
+	{sPreText = "";}
+    <BARSBLK> 
+    [<BARSDESC> tPreText=<TEXT> {sPreText = tPreText.image;} <ENDBARSDESC>] 
+    <BARLINE>
+    {render.enterBarsBlock(sPreText);} 
+    (Bar(render))+ 
+    <ENDBARSBLK>
+	{ ;
+	}	
+}
+
+void Title(SVGRenderer render) throws IOException :
+{ Token t; }
+{
+    <TITLEBLK> t=<TEXT> <ENDTITLE>
+	{
+	    render.printTitle( t.image);   
+	}
+}
+
+void TextBlock(SVGRenderer render) throws IOException :
+{ Token t; }
+{
+    <TEXTBLK> t=<TEXT> <ENDTEXT>
+	{
+	    render.printTextBlock( t.image);   
+	}
+}
+
+void Song(SVGRenderer render) throws IOException :
+{ }
+{
+  Title(render) (Bars(render))+ 
+   { ; }
+}

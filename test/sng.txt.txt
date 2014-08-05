@@ -1,0 +1,8 @@
+<TITLE>
+Mark's first wonderful song!
+</TITLE> 	
+<BARS>
+| [A]Now we have a [B#] wonderful time | [E-7]trying to make chords fit 
+| [A] there are | [A9] | [C] that | [B] we | [A9] all| [Dmaj] should 
+| [E7] All should know | [B]| [C] | empty bar 1 | [F#m7] |[Am7] |[A7+5] | [B-7+5] |
+</BARS>
